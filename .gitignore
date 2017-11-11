@@ -2,5 +2,6 @@
 .envrc
 .vscode/
 *.pyc
-scratch_pad.ipynb
 .ipynb_checkpoints/
+.coverage
+
