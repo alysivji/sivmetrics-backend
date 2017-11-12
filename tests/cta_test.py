@@ -62,7 +62,7 @@ def test_get_successful_response(client, mocker):
 
     json_mock = mocker.MagicMock()
     json_mock.json.return_value = fake_data()
-    response_mock = mocker.patch.object(
+    request_mock = mocker.patch.object(
         backend.cta.requests,
         'get',
         return_value=json_mock,
@@ -78,8 +78,8 @@ def test_get_successful_response(client, mocker):
     assert response.json[1] == {'bus': '146', 'min_away': 3}
 
     # request mock
-    args, kwargs = response_mock.call_args
+    args, kwargs = request_mock.call_args
     params = kwargs['params'].items()
-    assert response_mock.call_count == 1
+    assert request_mock.call_count == 1
     assert ('stpid', '1066') in params
     assert ('format', 'json') in params
