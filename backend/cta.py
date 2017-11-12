@@ -38,13 +38,18 @@ class Bus(object):
         if upcoming_buses:
             for bus in upcoming_buses:
                 predicted_time = maya.parse(bus['prdtm'])
-                min_till_next_bus = (predicted_time.epoch - right_now.epoch) / 60
+                min_till_next_bus = (
+                    (predicted_time.epoch - right_now.epoch) / 60
+                )
 
                 bus_to_add = {}
                 bus_to_add['bus'] = bus['rt']
                 bus_to_add['min_away'] = math.floor(min_till_next_bus)
                 cleaned_results.append(bus_to_add)
 
-        resp.data = json.dumps(cleaned_results, ensure_ascii=False).encode('utf-8')
+        resp.data = (
+            json.dumps(cleaned_results, ensure_ascii=False)
+                .encode('utf-8')
+        )
         resp.content_type = falcon.MEDIA_JSON
         resp.status = falcon.HTTP_200
