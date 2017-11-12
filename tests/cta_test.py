@@ -4,10 +4,12 @@
 import pytest
 from falcon import testing
 
-# internal imports
-import backend.app
+# required libraries
 import datetime
 import falcon
+
+# internal import
+import backend.app
 
 
 def fake_data():
@@ -58,12 +60,12 @@ def test_get_successful_response(client, mocker):
         datetime.datetime(2017, 11, 11, 21, 57)
     )
 
-    response_mock = mocker.MagicMock()
-    response_mock.json.return_value = fake_data()
-    mocker.patch.object(
+    json_mock = mocker.MagicMock()
+    json_mock.json.return_value = fake_data()
+    response_mock = mocker.patch.object(
         backend.cta.requests,
         'get',
-        return_value=response_mock,
+        return_value=json_mock,
     )
 
     # Act
@@ -74,3 +76,10 @@ def test_get_successful_response(client, mocker):
     assert len(response.json) == 2
     assert response.json[0] == {'bus': '151', 'min_away': 1}
     assert response.json[1] == {'bus': '146', 'min_away': 3}
+
+    # request mock
+    args, kwargs = response_mock.call_args
+    params = kwargs['params'].items()
+    assert response_mock.call_count == 1
+    assert ('stpid', '1066') in params
+    assert ('format', 'json') in params
