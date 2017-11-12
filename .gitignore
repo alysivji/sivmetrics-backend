@@ -4,4 +4,4 @@
 *.pyc
 .ipynb_checkpoints/
 .coverage
-
+.cache
