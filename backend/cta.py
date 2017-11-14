@@ -29,27 +29,32 @@ class Bus(object):
         }
         r = requests.get(CTA_BASE_URL, params=payload)
 
-        # parse response
-        upcoming_buses = r.json().get('bustime-response', None)
-        if upcoming_buses:
-            upcoming_buses = upcoming_buses.get('prd', None)
+        import q; q(r.status_code)
 
-        cleaned_results = []
-        if upcoming_buses:
-            for bus in upcoming_buses:
-                predicted_time = maya.parse(bus['prdtm'])
-                min_till_next_bus = (
-                    (predicted_time.epoch - right_now.epoch) / 60
-                )
+        if r.status_code == 200:
+            # parse response
+            upcoming_buses = r.json().get('bustime-response', None)
+            if upcoming_buses:
+                upcoming_buses = upcoming_buses.get('prd', None)
 
-                bus_to_add = {}
-                bus_to_add['bus'] = bus['rt']
-                bus_to_add['min_away'] = math.floor(min_till_next_bus)
-                cleaned_results.append(bus_to_add)
+            cleaned_results = []
+            if upcoming_buses:
+                for bus in upcoming_buses:
+                    predicted_time = maya.parse(bus['prdtm'])
+                    min_till_next_bus = (
+                        (predicted_time.epoch - right_now.epoch) / 60
+                    )
 
-        resp.data = (
-            json.dumps(cleaned_results, ensure_ascii=False)
-                .encode('utf-8')
-        )
-        resp.content_type = falcon.MEDIA_JSON
-        resp.status = falcon.HTTP_200
+                    bus_to_add = {}
+                    bus_to_add['bus'] = bus['rt']
+                    bus_to_add['min_away'] = math.floor(min_till_next_bus)
+                    cleaned_results.append(bus_to_add)
+
+            resp.data = (json.dumps(cleaned_results, ensure_ascii=False)
+                             .encode('utf-8'))
+            resp.content_type = falcon.MEDIA_JSON
+            resp.status = falcon.HTTP_200
+
+        else:
+            # forward all non successful codes
+            resp.status_code = r.status_code
