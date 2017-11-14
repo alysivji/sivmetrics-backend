@@ -16,7 +16,7 @@ CTA_BASE_URL = 'http://www.ctabustracker.com/bustime/api/v2/getpredictions'
 CTA_API_KEY = os.getenv('CTA_API_KEY', None)
 
 
-class Bus(object):
+class BusResource(object):
 
     def on_get(self, req, resp, stop_id):
         right_now = maya.MayaDT.from_datetime(datetime.datetime.now())
@@ -28,8 +28,6 @@ class Bus(object):
             'format': 'json'
         }
         r = requests.get(CTA_BASE_URL, params=payload)
-
-        import q; q(r.status_code)
 
         if r.status_code == 200:
             # parse response
@@ -50,8 +48,9 @@ class Bus(object):
                     bus_to_add['min_away'] = math.floor(min_till_next_bus)
                     cleaned_results.append(bus_to_add)
 
-            resp.data = (json.dumps(cleaned_results, ensure_ascii=False)
-                             .encode('utf-8'))
+            resp.data = (
+                json.dumps(cleaned_results, ensure_ascii=False).encode('utf-8')
+            )
             resp.content_type = falcon.MEDIA_JSON
             resp.status = falcon.HTTP_200
 
