@@ -32,7 +32,7 @@ class BusResource(object):
         # TODO logging
 
         error_flag = True
-        result = 'unknown'
+        result = ''
 
         response_type = resp_json.get('bustime-response', dict())
         if 'prd' in response_type:
@@ -43,6 +43,12 @@ class BusResource(object):
             error_details = response_type.get('error')[0]
             if 'stpid' in error_details:
                 result = f"stop_id: {error_details['stpid']} does not exist"
+            else:
+                result = error_details
+        else:
+            # got something we didn't except
+            # log it and send client a message letting them know something was off
+            pass
         return result, error_flag
 
     @staticmethod

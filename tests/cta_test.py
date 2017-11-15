@@ -138,3 +138,21 @@ def test_wrong_stop(client, mocker):
     # Assert
     assert response.status == falcon.HTTP_200
     assert response.json == {'error': 'stop_id: 106 does not exist'}
+
+def test_unsupported_function(client, mocker):
+    # Arrange
+    get_mock = mocker.MagicMock()
+    get_mock.status_code = 200
+    get_mock.json.return_value = __fake_data('unsupported_function')
+    mocker.patch.object(
+        backend.cta.requests,
+        'get',
+        return_value=get_mock,
+    )
+
+    # Act
+    response = client.simulate_get('/stops/1066')
+
+    # Assert
+    assert response.status == falcon.HTTP_200
+    assert response.json == {'error': {'msg': 'Unsupported function'}}
