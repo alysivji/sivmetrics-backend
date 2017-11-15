@@ -74,10 +74,11 @@ def test_get_successful_response(client, mocker):
     response = client.simulate_get('/stops/1066')
 
     # Assert
+    upcoming_buses = response.json['result']
     assert response.status == falcon.HTTP_200
-    assert len(response.json) == 4
-    assert response.json[0] == {'bus': '146', 'min_away': 3}
-    assert response.json[1] == {'bus': '151', 'min_away': 10}
+    assert len(upcoming_buses) == 4
+    assert upcoming_buses[0] == {'bus': '146', 'min_away': 3}
+    assert upcoming_buses[1] == {'bus': '151', 'min_away': 10}
 
     args, kwargs = request_mock.call_args
     params = kwargs['params'].items()

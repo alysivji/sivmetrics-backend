@@ -19,7 +19,7 @@ CTA_API_KEY = os.getenv('CTA_API_KEY', None)
 class BusResource(object):
 
     @staticmethod
-    def upcoming_busses(bus_schedule, curr_time):
+    def upcoming_buses(bus_schedule, curr_time):
         """Given bus schedule and current time, calculate upcoming buses
         """
         cleaned_results = []
@@ -62,9 +62,9 @@ class BusResource(object):
                 # need to parse and send out accordingly
                 if 'prd' in response_type:
                     bus_schedule = response_type.get('prd')
-                    body = self.upcoming_busses(bus_schedule, 
-                                                right_now)
-
+                    body = {
+                        'result': self.upcoming_buses(bus_schedule, right_now)
+                    }
                 elif 'error' in response_type:
                     # TODO handle error
                     body = {}
