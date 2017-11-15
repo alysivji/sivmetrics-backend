@@ -48,21 +48,21 @@ class BusResource(object):
 
         if 'prd' in response_type:
             bus_schedule = response_type.get('prd')
-            body = {
-                'result': BusResource.upcoming_buses(bus_schedule, curr_time)
-            }
+            result = BusResource.upcoming_buses(bus_schedule, curr_time)
         elif 'error' in response_type:
             # TODO handle error
-            body = {}
+            result = {}
         else:
             # TODO unknown type. pass back JSON
-            body = {}
+            result = {}
 
-        return body
+        return result
 
     def on_get(self, req, resp, stop_id):
         """GET method for BusResource
         """
+        error_flag = False
+
         # get data from CTA Bus Tracker API
         curr_time = maya.MayaDT.from_datetime(datetime.datetime.now())
         payload = {
@@ -74,13 +74,23 @@ class BusResource(object):
         try:
             r = requests.get(CTA_BASE_URL, params=payload)
         except ConnectionError:
-            body = {'error': 'URL not found'}
+            error_flag = True
+            body = 'URL not found'
         else:
             if r.status_code == 200:
                 body = self.process_cta_response(r.json(), curr_time)
             else:
-                body = {'error': f'Request returned {r.status_code}'}
+                error_flag = True
+                body = f'Request returned {r.status_code}'
         finally:
+            if error_flag:
+                resp_body = {'error': body}
+            else:
+                resp_body = {'result': body}
+
             resp.status_code = falcon.HTTP_200
             resp.content_type = falcon.MEDIA_JSON
-            resp.data = json.dumps(body, ensure_ascii=False).encode('utf-8')
+            resp.data = (
+                json.dumps(resp_body, ensure_ascii=False)
+                    .encode('utf-8')
+            )
