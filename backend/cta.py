@@ -19,7 +19,49 @@ CTA_API_KEY = os.getenv('CTA_API_KEY', None)
 class BusResource(object):
 
     @staticmethod
-    def upcoming_busses(bus_schedule, curr_time):
+    def _process_cta_response(resp_json, curr_time):
+        """Based on CTA reaponse header, process information
+        Return
+            * body - response body
+            * error_flag - boolean indicating if response is an error
+
+        Field Description
+            * 'prd' ~ predicted bus times
+            * 'error' ~ something went wrong, parse and let user know
+        """
+        # TODO logging
+
+        error_flag = True
+        result = ''
+
+        response_type = resp_json.get('bustime-response', dict())
+        if 'prd' in response_type:
+            error_flag = False
+            bus_schedule = response_type.get('prd')
+            result = BusResource._upcoming_buses(bus_schedule, curr_time)
+        elif 'error' in response_type:
+            # CTA API Error
+            error_details = response_type.get('error')[0]
+            if 'stpid' in error_details:
+                result = f"stop_id: {error_details['stpid']} does not exist"
+            else:
+                # CTA Error we are not expecting, look into
+                result = f'Unknown error: {error_details}'
+        else:
+            # API started releasing new response types, look into
+            result = f'Unexpected response type: {response_type}'
+        return result, error_flag
+
+    @staticmethod
+    def _structure_response(body, error_flag):
+        if error_flag:
+            resp_body = {'error': body}
+        else:
+            resp_body = {'result': body}
+        return resp_body
+
+    @staticmethod
+    def _upcoming_buses(bus_schedule, curr_time):
         """Given bus schedule and current time, calculate upcoming buses
         """
         cleaned_results = []
@@ -35,13 +77,13 @@ class BusResource(object):
                 bus_to_add['min_away'] = math.floor(min_till_next_bus)
                 cleaned_results.append(bus_to_add)
 
-        return json.dumps(cleaned_results, ensure_ascii=False).encode('utf-8')
+        return cleaned_results
 
     def on_get(self, req, resp, stop_id):
         """GET method for BusResource
         """
-
-        right_now = maya.MayaDT.from_datetime(datetime.datetime.now())
+        error_flag = True
+        curr_time = maya.MayaDT.from_datetime(datetime.datetime.now())
 
         # get data from CTA Bus Tracker API
         payload = {
@@ -49,28 +91,22 @@ class BusResource(object):
             'stpid': stop_id,
             'format': 'json'
         }
-        r = requests.get(CTA_BASE_URL, params=payload)
-
-        if r.status_code == 200:
-            response_type = r.json().get('bustime-response', dict())
-
-            # response_type can be 'error'  or 'prd'. need to parse and send out accordingly
-            if 'prd' in response_type:
-                bus_schedule = response_type.get('prd')
-                cleaned_data = self.upcoming_busses(bus_schedule, right_now)
-
-            elif 'error' in response_type:
-                # TODO handle error
-                pass
-            else:
-                # TODO unknown type. pass back JSON
-                pass
-
-            resp.data = cleaned_data
-            resp.content_type = falcon.MEDIA_JSON
-            resp.status = falcon.HTTP_200
-
+        try:
+            r = requests.get(CTA_BASE_URL, params=payload)
+        except ConnectionError:
+            body = 'URL not found'
         else:
-            # forward all non successful codes for now
-            # TODO send back custom error
-            resp.status_code = r.status_code
+            if r.status_code == 200:
+                body, error_flag = (
+                    self._process_cta_response(r.json(), curr_time)
+                )
+            else:
+                body = f'Request returned {r.status_code}'
+        finally:
+            resp.status_code = falcon.HTTP_200
+            resp.content_type = falcon.MEDIA_JSON
+            resp_body = self._structure_response(body, error_flag)
+            resp.data = (
+                json.dumps(resp_body, ensure_ascii=False)
+                    .encode('utf-8')
+            )
