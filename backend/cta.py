@@ -37,13 +37,34 @@ class BusResource(object):
 
         return cleaned_results
 
+    @staticmethod
+    def process_cta_response(resp_json, curr_time):
+        """Based on CTA reaponse header, process and return cleaned data
+
+        'prd' ~ predicted bus times
+        'error' ~ something went wrong, parse and let user know
+        """
+        response_type = resp_json.get('bustime-response', dict())
+
+        if 'prd' in response_type:
+            bus_schedule = response_type.get('prd')
+            body = {
+                'result': BusResource.upcoming_buses(bus_schedule, curr_time)
+            }
+        elif 'error' in response_type:
+            # TODO handle error
+            body = {}
+        else:
+            # TODO unknown type. pass back JSON
+            body = {}
+
+        return body
+
     def on_get(self, req, resp, stop_id):
         """GET method for BusResource
         """
-
-        right_now = maya.MayaDT.from_datetime(datetime.datetime.now())
-
         # get data from CTA Bus Tracker API
+        curr_time = maya.MayaDT.from_datetime(datetime.datetime.now())
         payload = {
             'key': CTA_API_KEY,
             'stpid': stop_id,
@@ -56,22 +77,7 @@ class BusResource(object):
             body = {'error': 'URL not found'}
         else:
             if r.status_code == 200:
-                response_type = r.json().get('bustime-response', dict())
-
-                # response_type can be 'error'  or 'prd'
-                # need to parse and send out accordingly
-                if 'prd' in response_type:
-                    bus_schedule = response_type.get('prd')
-                    body = {
-                        'result': self.upcoming_buses(bus_schedule, right_now)
-                    }
-                elif 'error' in response_type:
-                    # TODO handle error
-                    body = {}
-                else:
-                    # TODO unknown type. pass back JSON
-                    body = {}
-
+                body = self.process_cta_response(r.json(), curr_time)
             else:
                 body = {'error': f'Request returned {r.status_code}'}
         finally:
