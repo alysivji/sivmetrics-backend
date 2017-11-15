@@ -169,6 +169,7 @@ def test_unsupported_function(client, mocker):
         'error': "Unknown error: {'msg': 'Unsupported function'}"
     }
 
+
 def test_unknown_response_type(client, mocker):
     # Arrange
     get_mock = mocker.MagicMock()
@@ -188,3 +189,11 @@ def test_unknown_response_type(client, mocker):
     assert response.json == {
         'error': "Unexpected response type: {'foo': [{'msg': 'Unknown error'}]}"
     }
+
+
+def test_not_implemented(client):
+    response = client.simulate_post('/stops/1066')
+    assert response.status == falcon.HTTP_METHOD_NOT_ALLOWED
+
+    response = client.simulate_delete('/stops/1066')
+    assert response.status == falcon.HTTP_METHOD_NOT_ALLOWED
