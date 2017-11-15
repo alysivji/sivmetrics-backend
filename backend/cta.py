@@ -39,7 +39,7 @@ class BusResource(object):
 
     @staticmethod
     def _process_cta_response(resp_json, curr_time):
-        """Based on CTA reaponse header, process information
+        """Based on CTA response header, process information
         Return
             * body - response body
             * error_flag - boolean indicating if response is an error
@@ -53,13 +53,12 @@ class BusResource(object):
 
         response_type = resp_json.get('bustime-response', dict())
         if 'prd' in response_type:
-            bus_schedule = response_type.get('prd')
             error_flag = False
+            bus_schedule = response_type.get('prd')
             result = BusResource._upcoming_buses(bus_schedule, curr_time)
         elif 'error' in response_type:
             error_details = response_type.get('error')[0]
             if 'stpid' in error_details:
-                # stpid = error_details['stpid']
                 result = f"stop_id: {error_details['stpid']} does not exist"
         else:
             # TODO unknown type. pass back JSON
@@ -79,15 +78,14 @@ class BusResource(object):
         """GET method for BusResource
         """
         error_flag = True
+        curr_time = maya.MayaDT.from_datetime(datetime.datetime.now())
 
         # get data from CTA Bus Tracker API
-        curr_time = maya.MayaDT.from_datetime(datetime.datetime.now())
         payload = {
             'key': CTA_API_KEY,
             'stpid': stop_id,
             'format': 'json'
         }
-
         try:
             r = requests.get(CTA_BASE_URL, params=payload)
         except ConnectionError:
@@ -100,10 +98,9 @@ class BusResource(object):
             else:
                 body = f'Request returned {r.status_code}'
         finally:
-            resp_body = self._structure_response(body, error_flag)
-
             resp.status_code = falcon.HTTP_200
             resp.content_type = falcon.MEDIA_JSON
+            resp_body = self._structure_response(body, error_flag)
             resp.data = (
                 json.dumps(resp_body, ensure_ascii=False)
                     .encode('utf-8')
