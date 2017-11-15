@@ -19,6 +19,41 @@ CTA_API_KEY = os.getenv('CTA_API_KEY', None)
 class BusResource(object):
 
     @staticmethod
+    def _process_cta_response(resp_json, curr_time):
+        """Based on CTA reaponse header, process information
+        Return
+            * body - response body
+            * error_flag - boolean indicating if response is an error
+
+        Field Description
+            * 'prd' ~ predicted bus times
+            * 'error' ~ something went wrong, parse and let user know
+        """
+        # TODO logging
+
+        error_flag = True
+        result = 'unknown'
+
+        response_type = resp_json.get('bustime-response', dict())
+        if 'prd' in response_type:
+            error_flag = False
+            bus_schedule = response_type.get('prd')
+            result = BusResource._upcoming_buses(bus_schedule, curr_time)
+        elif 'error' in response_type:
+            error_details = response_type.get('error')[0]
+            if 'stpid' in error_details:
+                result = f"stop_id: {error_details['stpid']} does not exist"
+        return result, error_flag
+
+    @staticmethod
+    def _structure_response(body, error_flag):
+        if error_flag:
+            resp_body = {'error': body}
+        else:
+            resp_body = {'result': body}
+        return resp_body
+
+    @staticmethod
     def _upcoming_buses(bus_schedule, curr_time):
         """Given bus schedule and current time, calculate upcoming buses
         """
@@ -36,43 +71,6 @@ class BusResource(object):
                 cleaned_results.append(bus_to_add)
 
         return cleaned_results
-
-    @staticmethod
-    def _process_cta_response(resp_json, curr_time):
-        """Based on CTA response header, process information
-        Return
-            * body - response body
-            * error_flag - boolean indicating if response is an error
-
-        Field Description
-            * 'prd' ~ predicted bus times
-            * 'error' ~ something went wrong, parse and let user know
-        """
-        error_flag = True
-        result = ''
-
-        response_type = resp_json.get('bustime-response', dict())
-        if 'prd' in response_type:
-            error_flag = False
-            bus_schedule = response_type.get('prd')
-            result = BusResource._upcoming_buses(bus_schedule, curr_time)
-        elif 'error' in response_type:
-            error_details = response_type.get('error')[0]
-            if 'stpid' in error_details:
-                result = f"stop_id: {error_details['stpid']} does not exist"
-        else:
-            # TODO unknown type. pass back JSON
-            pass
-
-        return result, error_flag
-
-    @staticmethod
-    def _structure_response(body, error_flag):
-        if error_flag:
-            resp_body = {'error': body}
-        else:
-            resp_body = {'result': body}
-        return resp_body
 
     def on_get(self, req, resp, stop_id):
         """GET method for BusResource

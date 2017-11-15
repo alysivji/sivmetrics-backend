@@ -40,7 +40,7 @@ def __fake_data(response_type):
     if response_type == 'wrong_stop':
         return CTA_ERROR_INCORRECT_REPONSE
 
-    if response_type == 'unsupported_function_error':
+    if response_type == 'unsupported_function':
         return CTA_ERROR_UNSUPPORTED_FUNCTION_RESPONSE
 
     raise Exception
