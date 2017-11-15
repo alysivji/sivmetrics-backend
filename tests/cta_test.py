@@ -119,3 +119,22 @@ def test_url_not_found(client, mocker):
     # Assert
     assert response.status == falcon.HTTP_200
     assert response.json == {'error': 'URL not found'}
+
+
+def test_wrong_stop(client, mocker):
+    # Arrange
+    get_mock = mocker.MagicMock()
+    get_mock.status_code = 200
+    get_mock.json.return_value = __fake_data('wrong_stop')
+    mocker.patch.object(
+        backend.cta.requests,
+        'get',
+        return_value=get_mock
+    )
+
+    # Act
+    response = client.simulate_get('/stops/106')
+
+    # Assert
+    assert response.status == falcon.HTTP_200
+    assert response.json == {'error': 'stop_id: 106 does not exist'}

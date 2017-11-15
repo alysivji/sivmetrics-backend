@@ -39,29 +39,38 @@ class BusResource(object):
 
     @staticmethod
     def process_cta_response(resp_json, curr_time):
-        """Based on CTA reaponse header, process and return cleaned data
+        """Based on CTA reaponse header, process information
+        Return
+            * body - response body
+            * error_flag - boolean indicating if response is an error
 
-        'prd' ~ predicted bus times
-        'error' ~ something went wrong, parse and let user know
+        Field Description
+            * 'prd' ~ predicted bus times
+            * 'error' ~ something went wrong, parse and let user know
         """
-        response_type = resp_json.get('bustime-response', dict())
+        error_flag = True
+        result = ''
 
+        response_type = resp_json.get('bustime-response', dict())
         if 'prd' in response_type:
             bus_schedule = response_type.get('prd')
+            error_flag = False
             result = BusResource.upcoming_buses(bus_schedule, curr_time)
         elif 'error' in response_type:
-            # TODO handle error
-            result = {}
+            error_details = response_type.get('error')[0]
+            if 'stpid' in error_details:
+                # stpid = error_details['stpid']
+                result = f"stop_id: {error_details['stpid']} does not exist"
         else:
             # TODO unknown type. pass back JSON
-            result = {}
+            pass
 
-        return result
+        return result, error_flag
 
     def on_get(self, req, resp, stop_id):
         """GET method for BusResource
         """
-        error_flag = False
+        error_flag = True
 
         # get data from CTA Bus Tracker API
         curr_time = maya.MayaDT.from_datetime(datetime.datetime.now())
@@ -74,13 +83,13 @@ class BusResource(object):
         try:
             r = requests.get(CTA_BASE_URL, params=payload)
         except ConnectionError:
-            error_flag = True
             body = 'URL not found'
         else:
             if r.status_code == 200:
-                body = self.process_cta_response(r.json(), curr_time)
+                body, error_flag = (
+                    self.process_cta_response(r.json(), curr_time)
+                )
             else:
-                error_flag = True
                 body = f'Request returned {r.status_code}'
         finally:
             if error_flag:
