@@ -16,7 +16,9 @@ import backend.app
 # set up fake response file paths
 CTA_TEST_DIR = 'tests/cta-fake-response-json/'
 CTA_SUCCESS_RESP = os.path.join(CTA_TEST_DIR, 'cta_success_fake_response.json')
-CTA_ERROR_INCORRECT_STOP_RESP = os.path.join(CTA_TEST_DIR, 'cta_error_incorrect_stop_response.json')
+CTA_ERROR_INCORRECT_STOP_RESP = (
+    os.path.join(CTA_TEST_DIR, 'cta_error_incorrect_stop_response.json')
+)
 CTA_ERROR_UNSUPPORTED_FUNC_RESP = (
     os.path.join(CTA_TEST_DIR, 'cta_error_unsupported_function_response.json')
 )
@@ -87,7 +89,7 @@ def test_get_successful_response(client, mocker):
 def test_404(client, mocker):
     # Arrange
     get_mock = mocker.MagicMock()
-    get_mock.status_code.return_value = 404
+    get_mock.status_code = 404
     mocker.patch.object(
         backend.cta.requests,
         'get',
@@ -95,7 +97,24 @@ def test_404(client, mocker):
     )
 
     # Act
-    response = client.simulate_get('/')
+    response = client.simulate_get('/stops/1066')
 
     # Assert
-    assert response.status == falcon.HTTP_404
+    assert response.status == falcon.HTTP_200
+    assert response.json == {'error': f'Request returned 404'}
+
+
+def test_url_not_found(client, mocker):
+    # Arrange
+    mocker.patch.object(
+        backend.cta.requests,
+        'get',
+        side_effect=[ConnectionError]
+    )
+
+    # Act
+    response = client.simulate_get('/stops/1066')
+
+    # Assert
+    assert response.status == falcon.HTTP_200
+    assert response.json == {'error': 'URL not found'}

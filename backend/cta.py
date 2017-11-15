@@ -35,7 +35,7 @@ class BusResource(object):
                 bus_to_add['min_away'] = math.floor(min_till_next_bus)
                 cleaned_results.append(bus_to_add)
 
-        return json.dumps(cleaned_results, ensure_ascii=False).encode('utf-8')
+        return cleaned_results
 
     def on_get(self, req, resp, stop_id):
         """GET method for BusResource
@@ -49,28 +49,32 @@ class BusResource(object):
             'stpid': stop_id,
             'format': 'json'
         }
-        r = requests.get(CTA_BASE_URL, params=payload)
 
-        if r.status_code == 200:
-            response_type = r.json().get('bustime-response', dict())
-
-            # response_type can be 'error'  or 'prd'. need to parse and send out accordingly
-            if 'prd' in response_type:
-                bus_schedule = response_type.get('prd')
-                cleaned_data = self.upcoming_busses(bus_schedule, right_now)
-
-            elif 'error' in response_type:
-                # TODO handle error
-                pass
-            else:
-                # TODO unknown type. pass back JSON
-                pass
-
-            resp.data = cleaned_data
-            resp.content_type = falcon.MEDIA_JSON
-            resp.status = falcon.HTTP_200
-
+        try:
+            r = requests.get(CTA_BASE_URL, params=payload)
+        except ConnectionError:
+            body = {'error': 'URL not found'}
         else:
-            # forward all non successful codes for now
-            # TODO send back custom error
-            resp.status_code = r.status_code
+            if r.status_code == 200:
+                response_type = r.json().get('bustime-response', dict())
+
+                # response_type can be 'error'  or 'prd'
+                # need to parse and send out accordingly
+                if 'prd' in response_type:
+                    bus_schedule = response_type.get('prd')
+                    body = self.upcoming_busses(bus_schedule, 
+                                                right_now)
+
+                elif 'error' in response_type:
+                    # TODO handle error
+                    body = {}
+                else:
+                    # TODO unknown type. pass back JSON
+                    body = {}
+
+            else:
+                body = {'error': f'Request returned {r.status_code}'}
+        finally:
+            resp.status_code = falcon.HTTP_200
+            resp.content_type = falcon.MEDIA_JSON
+            resp.data = json.dumps(body, ensure_ascii=False).encode('utf-8')
