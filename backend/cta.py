@@ -40,15 +40,16 @@ class BusResource(object):
             bus_schedule = response_type.get('prd')
             result = BusResource._upcoming_buses(bus_schedule, curr_time)
         elif 'error' in response_type:
+            # CTA API Error
             error_details = response_type.get('error')[0]
             if 'stpid' in error_details:
                 result = f"stop_id: {error_details['stpid']} does not exist"
             else:
-                result = error_details
+                # CTA Error we are not expecting, look into
+                result = f'Unknown error: {error_details}'
         else:
-            # got something we didn't except
-            # log it and send client a message letting them know something was off
-            pass
+            # API started releasing new response types, look into
+            result = f'Unexpected response type: {response_type}'
         return result, error_flag
 
     @staticmethod
