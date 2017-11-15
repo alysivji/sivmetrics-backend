@@ -19,7 +19,7 @@ CTA_API_KEY = os.getenv('CTA_API_KEY', None)
 class BusResource(object):
 
     @staticmethod
-    def upcoming_buses(bus_schedule, curr_time):
+    def _upcoming_buses(bus_schedule, curr_time):
         """Given bus schedule and current time, calculate upcoming buses
         """
         cleaned_results = []
@@ -38,7 +38,7 @@ class BusResource(object):
         return cleaned_results
 
     @staticmethod
-    def process_cta_response(resp_json, curr_time):
+    def _process_cta_response(resp_json, curr_time):
         """Based on CTA reaponse header, process information
         Return
             * body - response body
@@ -55,7 +55,7 @@ class BusResource(object):
         if 'prd' in response_type:
             bus_schedule = response_type.get('prd')
             error_flag = False
-            result = BusResource.upcoming_buses(bus_schedule, curr_time)
+            result = BusResource._upcoming_buses(bus_schedule, curr_time)
         elif 'error' in response_type:
             error_details = response_type.get('error')[0]
             if 'stpid' in error_details:
@@ -66,6 +66,14 @@ class BusResource(object):
             pass
 
         return result, error_flag
+
+    @staticmethod
+    def _structure_response(body, error_flag):
+        if error_flag:
+            resp_body = {'error': body}
+        else:
+            resp_body = {'result': body}
+        return resp_body
 
     def on_get(self, req, resp, stop_id):
         """GET method for BusResource
@@ -87,15 +95,12 @@ class BusResource(object):
         else:
             if r.status_code == 200:
                 body, error_flag = (
-                    self.process_cta_response(r.json(), curr_time)
+                    self._process_cta_response(r.json(), curr_time)
                 )
             else:
                 body = f'Request returned {r.status_code}'
         finally:
-            if error_flag:
-                resp_body = {'error': body}
-            else:
-                resp_body = {'result': body}
+            resp_body = self._structure_response(body, error_flag)
 
             resp.status_code = falcon.HTTP_200
             resp.content_type = falcon.MEDIA_JSON

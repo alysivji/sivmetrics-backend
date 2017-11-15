@@ -102,7 +102,7 @@ def test_404(client, mocker):
 
     # Assert
     assert response.status == falcon.HTTP_200
-    assert response.json == {'error': f'Request returned 404'}
+    assert response.json == {'error': 'Request returned 404'}
 
 
 def test_url_not_found(client, mocker):
@@ -129,7 +129,7 @@ def test_wrong_stop(client, mocker):
     mocker.patch.object(
         backend.cta.requests,
         'get',
-        return_value=get_mock
+        return_value=get_mock,
     )
 
     # Act
