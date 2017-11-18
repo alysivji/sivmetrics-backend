@@ -13,7 +13,7 @@ import falcon
 # internal import
 import backend.app
 
-# set up fake response file paths
+# json files for test
 CTA_TEST_DIR = 'tests/cta-fake-response-json/'
 CTA_SUCCESS_JSON_RESP = (
     os.path.join(CTA_TEST_DIR, 'cta_success_fake_response.json')
@@ -27,34 +27,36 @@ CTA_ERROR_UNKNOWN_TYPE_JSON_RESP = (
 CTA_ERROR_UNSUPPORTED_FUNC_JSON_RESP = (
     os.path.join(CTA_TEST_DIR, 'cta_error_unsupported_function_response.json')
 )
-# load data from fake reponse files
-with open(CTA_SUCCESS_JSON_RESP, 'r') as f:
-    CTA_SUCCESS_RESPONSE = json.load(f)
-with open(CTA_ERROR_INCORRECT_STOP_JSON_RESP, 'r') as f:
-    CTA_ERROR_INCORRECT_REPONSE = json.load(f)
-with open(CTA_ERROR_UNKNOWN_TYPE_JSON_RESP, 'r') as f:
-    CTA_ERROR_UNKNOWN_TYPE_FUNCTION_RESPONSE = json.load(f)
-with open(CTA_ERROR_UNSUPPORTED_FUNC_JSON_RESP, 'r') as f:
-    CTA_ERROR_UNSUPPORTED_FUNCTION_RESPONSE = json.load(f)
 
 
-def __fake_data(response_type):
-    """Send fake data to mock object
-    """
-    if response_type == 'success_response':
-        return CTA_SUCCESS_RESPONSE
+# data loading fixtures
+@pytest.fixture(scope='session')
+def success_response():
+    with open(CTA_SUCCESS_JSON_RESP, 'r') as f:
+        data = json.load(f)
+    return data
 
-    if response_type == 'wrong_stop':
-        return CTA_ERROR_INCORRECT_REPONSE
 
-    if response_type == 'unsupported_function':
-        return CTA_ERROR_UNSUPPORTED_FUNCTION_RESPONSE
+@pytest.fixture(scope='session')
+def error_incorrect_stop():
+    with open(CTA_ERROR_INCORRECT_STOP_JSON_RESP, 'r') as f:
+        data = json.load(f)
+    return data
 
-    if response_type == 'unknown_type':
-        return CTA_ERROR_UNKNOWN_TYPE_FUNCTION_RESPONSE
 
-    raise Exception
+@pytest.fixture(scope='session')
+def error_unknown_type():
+    with open(CTA_ERROR_UNKNOWN_TYPE_JSON_RESP, 'r') as f:
+        data = json.load(f)
+    return data
 
+
+@pytest.fixture(scope='session')
+def error_unsupported_func():
+    with open(CTA_ERROR_UNSUPPORTED_FUNC_JSON_RESP, 'r') as f:
+        data = json.load(f)
+    return data
+    
 
 @pytest.fixture()
 def client():
@@ -64,7 +66,7 @@ def client():
     return testing.TestClient(api)
 
 
-def test_get_successful_response(client, mocker):
+def test_get_successful_response(client, mocker, success_response):
     # Arrange
     mock_datetime = mocker.patch.object(backend.cta, 'datetime')
     mock_datetime.datetime.now.return_value = (
@@ -72,7 +74,7 @@ def test_get_successful_response(client, mocker):
     )
 
     get_mock = mocker.MagicMock()
-    get_mock.json.return_value = __fake_data('success_response')
+    get_mock.json.return_value = success_response
     get_mock.status_code = 200
     request_mock = mocker.patch.object(
         backend.cta.requests,
@@ -131,11 +133,11 @@ def test_url_not_found(client, mocker):
     assert response.json == {'error': 'URL not found'}
 
 
-def test_wrong_stop(client, mocker):
+def test_wrong_stop(client, mocker, error_incorrect_stop):
     # Arrange
     get_mock = mocker.MagicMock()
     get_mock.status_code = 200
-    get_mock.json.return_value = __fake_data('wrong_stop')
+    get_mock.json.return_value = error_incorrect_stop
     mocker.patch.object(
         backend.cta.requests,
         'get',
@@ -149,11 +151,11 @@ def test_wrong_stop(client, mocker):
     assert response.status == falcon.HTTP_200
     assert response.json == {'error': 'stop_id: 106 does not exist'}
 
-def test_unsupported_function(client, mocker):
+def test_unsupported_function(client, mocker, error_unsupported_func):
     # Arrange
     get_mock = mocker.MagicMock()
     get_mock.status_code = 200
-    get_mock.json.return_value = __fake_data('unsupported_function')
+    get_mock.json.return_value = error_unsupported_func
     mocker.patch.object(
         backend.cta.requests,
         'get',
@@ -170,11 +172,11 @@ def test_unsupported_function(client, mocker):
     }
 
 
-def test_unknown_response_type(client, mocker):
+def test_unknown_response_type(client, mocker, error_unknown_type):
     # Arrange
     get_mock = mocker.MagicMock()
     get_mock.status_code = 200
-    get_mock.json.return_value = __fake_data('unknown_type')
+    get_mock.json.return_value = error_unknown_type
     mocker.patch.object(
         backend.cta.requests,
         'get',
