@@ -197,5 +197,11 @@ def test_not_implemented(client):
     response = client.simulate_post('/stops/1066')
     assert response.status == falcon.HTTP_METHOD_NOT_ALLOWED
 
+    response = client.simulate_put('/stops/1066')
+    assert response.status == falcon.HTTP_METHOD_NOT_ALLOWED
+
+    response = client.simulate_patch('/stops/1066')
+    assert response.status == falcon.HTTP_METHOD_NOT_ALLOWED
+
     response = client.simulate_delete('/stops/1066')
     assert response.status == falcon.HTTP_METHOD_NOT_ALLOWED
