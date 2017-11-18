@@ -2,7 +2,6 @@
 
 # standard library
 import datetime
-import json
 import os
 
 # testing libraries
@@ -13,50 +12,9 @@ import falcon
 # internal import
 import backend.app
 
-# json files for test
-CTA_TEST_DIR = 'tests/cta-fake-response-json/'
-CTA_SUCCESS_JSON_RESP = (
-    os.path.join(CTA_TEST_DIR, 'cta_success_fake_response.json')
-)
-CTA_ERROR_INCORRECT_STOP_JSON_RESP = (
-    os.path.join(CTA_TEST_DIR, 'cta_error_incorrect_stop_response.json')
-)
-CTA_ERROR_UNKNOWN_TYPE_JSON_RESP = (
-    os.path.join(CTA_TEST_DIR, 'cta_error_unknown_type_response.json')
-)
-CTA_ERROR_UNSUPPORTED_FUNC_JSON_RESP = (
-    os.path.join(CTA_TEST_DIR, 'cta_error_unsupported_function_response.json')
-)
+# folder with json files for test
+CTA_TEST_DIR = 'tests/func/cta-fake-response-json/'
 
-
-# data loading fixtures
-@pytest.fixture(scope='session')
-def success_response():
-    with open(CTA_SUCCESS_JSON_RESP, 'r') as f:
-        data = json.load(f)
-    return data
-
-
-@pytest.fixture(scope='session')
-def error_incorrect_stop():
-    with open(CTA_ERROR_INCORRECT_STOP_JSON_RESP, 'r') as f:
-        data = json.load(f)
-    return data
-
-
-@pytest.fixture(scope='session')
-def error_unknown_type():
-    with open(CTA_ERROR_UNKNOWN_TYPE_JSON_RESP, 'r') as f:
-        data = json.load(f)
-    return data
-
-
-@pytest.fixture(scope='session')
-def error_unsupported_func():
-    with open(CTA_ERROR_UNSUPPORTED_FUNC_JSON_RESP, 'r') as f:
-        data = json.load(f)
-    return data
-    
 
 @pytest.fixture()
 def client():
@@ -66,7 +24,12 @@ def client():
     return testing.TestClient(api)
 
 
-def test_get_successful_response(client, mocker, success_response):
+CTA_SUCCESS_JSON_RESP = (
+    os.path.join(CTA_TEST_DIR, 'cta_success_fake_response.json')
+)
+
+
+def test_get_successful_response(client, mocker, json_loader):
     # Arrange
     mock_datetime = mocker.patch.object(backend.cta, 'datetime')
     mock_datetime.datetime.now.return_value = (
@@ -74,7 +37,9 @@ def test_get_successful_response(client, mocker, success_response):
     )
 
     get_mock = mocker.MagicMock()
-    get_mock.json.return_value = success_response
+    get_mock.json.return_value = json_loader(
+        CTA_SUCCESS_JSON_RESP
+    )
     get_mock.status_code = 200
     request_mock = mocker.patch.object(
         backend.cta.requests,
@@ -133,11 +98,18 @@ def test_url_not_found(client, mocker):
     assert response.json == {'error': 'URL not found'}
 
 
-def test_wrong_stop(client, mocker, error_incorrect_stop):
+CTA_ERROR_INCORRECT_STOP_JSON_RESP = (
+    os.path.join(CTA_TEST_DIR, 'cta_error_incorrect_stop_response.json')
+)
+
+
+def test_wrong_stop(client, mocker, json_loader):
     # Arrange
     get_mock = mocker.MagicMock()
     get_mock.status_code = 200
-    get_mock.json.return_value = error_incorrect_stop
+    get_mock.json.return_value = json_loader(
+        CTA_ERROR_INCORRECT_STOP_JSON_RESP
+    )
     mocker.patch.object(
         backend.cta.requests,
         'get',
@@ -151,11 +123,19 @@ def test_wrong_stop(client, mocker, error_incorrect_stop):
     assert response.status == falcon.HTTP_200
     assert response.json == {'error': 'stop_id: 106 does not exist'}
 
-def test_unsupported_function(client, mocker, error_unsupported_func):
+
+CTA_ERROR_UNSUPPORTED_FUNC_JSON_RESP = (
+    os.path.join(CTA_TEST_DIR, 'cta_error_unsupported_function_response.json')
+)
+
+
+def test_unsupported_function(client, mocker, json_loader):
     # Arrange
     get_mock = mocker.MagicMock()
     get_mock.status_code = 200
-    get_mock.json.return_value = error_unsupported_func
+    get_mock.json.return_value = json_loader(
+        CTA_ERROR_UNSUPPORTED_FUNC_JSON_RESP
+    )
     mocker.patch.object(
         backend.cta.requests,
         'get',
@@ -172,11 +152,18 @@ def test_unsupported_function(client, mocker, error_unsupported_func):
     }
 
 
-def test_unknown_response_type(client, mocker, error_unknown_type):
+CTA_ERROR_UNKNOWN_TYPE_JSON_RESP = (
+    os.path.join(CTA_TEST_DIR, 'cta_error_unknown_type_response.json')
+)
+
+
+def test_unknown_response_type(client, mocker, json_loader):
     # Arrange
     get_mock = mocker.MagicMock()
     get_mock.status_code = 200
-    get_mock.json.return_value = error_unknown_type
+    get_mock.json.return_value = json_loader(
+        CTA_ERROR_UNKNOWN_TYPE_JSON_RESP
+    )
     mocker.patch.object(
         backend.cta.requests,
         'get',
